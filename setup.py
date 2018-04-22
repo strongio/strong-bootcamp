@@ -1,13 +1,4 @@
-from os import path
 import setuptools
-
-# automatically generate requirements
-here = path.abspath(path.dirname(__file__))
-with open(path.join(here, 'bootcamp/requirements.txt')) as f:
-    requirements = f.read().split("\n")
-
-    # anticipating this bug in the future:
-    requirements = [r for r in requirements if 'bootcamp' not in r]
 
 setuptools.setup(
     name='strong-bootcamp',
@@ -18,10 +9,10 @@ setuptools.setup(
     author='Strong Analytics',
     author_email='contact@strong.io',
     description='Framework for experimenting with and validating models pre-deployment.',
-    install_requires=requirements,
+    install_requires=['pyyaml'],
     entry_points={
         'console_scripts': [
-            'bootcamp=bootcamp.cli.entry:main'
+            'bootcamp=bootcamp.cli:main'
         ]
     }
 )

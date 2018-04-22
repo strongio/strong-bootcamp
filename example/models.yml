@@ -1,10 +1,11 @@
 models:
-  - linear:
-    - module: models.linear
-    - callable: LinearModel
-    - parameters:
-      - l1: [.1, .5, .9]
-  - loglinear:
-    - class: models.linear.LogLinear
-    - parameters:
-      - l2: [.1, .2, .3]
+  linear:
+    module: example.models.linear
+    callable: LinearModel
+    parameters:
+      l1: [.1, .5, .9]
+  loglinear:
+    module: example.models.loglinear
+    callable: LogLinearModel
+    parameters:
+      l2: [.1, .2, .3]

@@ -1,11 +1,10 @@
 from collections import namedtuple
-from bootcamp.bootcamp import Bootcamp
 
 # define an example data structure that will be used
 text = namedtuple('text', ['string'])
 
 
-class Camp(Bootcamp):
+class Camp(object):
     def __init__(self):
         super().__init__()
 
@@ -32,21 +31,10 @@ class Camp(Bootcamp):
         Receive a trained model and pass it whatever is required to validate it. Return
         the validation dictionary it returns.
         """
-        return model.validate(text=self.validation, classes=self.training_classes)
 
-    def test(self, model):
-        """
-        Receive a trained model and perform miscellaneous unit-tests on it.
-        """
-
-        # arbitrary test:
-        if model.__name__ == 'random':
+        # before doing statistical validation, we can do some miscellaneous unit tests
+        if type(model).__name__ == 'random':
             raise Exception("Models can't be named random. It sends a bad message to the client.")
 
-        # check for save/load functionality:
-        try:
-            model.save(path='/test/file.pkl')
-            model.load(path='/test/file.pkl')
-        except:
-            raise Exception("Model doesn't appear to save or load correctly.")
-
+        # run the validation and return the results
+        return model.validate(text=self.validation, classes=self.training_classes)

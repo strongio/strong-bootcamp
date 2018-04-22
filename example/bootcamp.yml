@@ -1,5 +1,5 @@
 bootcamp:
- module: example
+ module: example.camp
  callable: Camp
 model_requirements:
   parameters:
