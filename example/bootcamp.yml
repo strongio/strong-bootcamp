@@ -1,0 +1,14 @@
+bootcamp:
+ module: example
+ callable: Camp
+model_requirements:
+  parameters:
+    - n_epochs
+  methods:
+    - train: [text, classes]
+    - validate: [text, classes]
+    - save: [path]
+    - load: [path]
+    - predict: [text]
+  validation_metrics:
+    - AUC
