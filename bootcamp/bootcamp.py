@@ -64,7 +64,7 @@ class Bootcamp(object):
         for model_name, model in self.models.items():
             logger.info("Training one or more permutations of model: {}".format(model_name))
 
-            parameter_iterations = self.model_config['models'][model_name]['parameters']
+            parameter_iterations = self.model_config['models'][model_name]['parameters'] if 'parameters' in self.model_config['models'][model_name] else None
 
             for param_iter in self._parameter_iterations(parameter_iterations):
                 logger.info("Training model {} with parameters: {}".format(model_name, param_iter))
@@ -162,6 +162,10 @@ class Bootcamp(object):
             if 'model' not in this_argspec.parameters:
                 raise Exception("{}() in the bootcamp class must accept a 'model' as an argument".format(method_name))
 
+        # set default for parameters if it doesn't exist
+        if 'parameters' not in self.config['model_requirements']:
+            self.config['model_requirements']['parameters'] = []
+
     def _validate_model_config(self):
         # validate the configuration file itself:
         if not len(self.model_config['models']):
@@ -202,10 +206,14 @@ class Bootcamp(object):
 
             # evaluate whether parameters are valid:
             this_argspec = inspect.signature(self.models[model_name].__init__)
-            for parameter_name in self.config['model_requirements']['parameters']:
-                if parameter_name not in this_argspec.parameters:
-                    raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".format(parameter_name, model_name))
 
+            # global parameters
+            if self.config['model_requirements']['parameters']:
+                for parameter_name in self.config['model_requirements']['parameters']:
+                    if parameter_name not in this_argspec.parameters:
+                        raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".format(parameter_name, model_name))
+
+            # model-specific parameters
             if 'parameters' in model:
                 for parameter_name, values in model['parameters'].items():
                     # do we have potential values?
