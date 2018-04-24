@@ -77,7 +77,7 @@ class Bootcamp(object):
 
                 # save the model instance and parameters
                 self.model_instances[model_key] = {
-                    'object': model(*param_iter),
+                    'object': model(**param_iter),
                     'parameters': param_iter
                 }
 
