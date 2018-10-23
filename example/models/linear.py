@@ -1,3 +1,6 @@
+import random
+
+
 class LinearModel(object):
     def __init__(self, n_epochs=10, l1=0):
         """
@@ -9,20 +12,12 @@ class LinearModel(object):
 
     def train(self, text=[], classes=[]):
         """
-        Train the model. No response is required.
+        Train the model.
         """
         pass
-
-    def validate(self, text=[], classes=[]):
-        """
-        Validate the model. Requires a response with the metrics defined in bootcamp.yml.
-        """
-        return {
-            'AUC': .66
-        }
 
     def predict(self, text=[]):
-        pass
+        return [random.choice([True,False]) for _ in range(len(text))]
 
     def save(self, path):
         pass

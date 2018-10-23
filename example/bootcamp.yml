@@ -6,7 +6,6 @@ model_requirements:
     - n_epochs
   methods:
     - train: [text, classes]
-    - validate: [text, classes]
     - save: [path]
     - load: [path]
     - predict: [text]

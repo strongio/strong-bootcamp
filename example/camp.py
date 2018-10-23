@@ -7,24 +7,26 @@ text = namedtuple('text', ['string'])
 class Camp(object):
     def __init__(self):
         super().__init__()
-
         # pre-load data for use in training and testing
-        self.training = [
-            text(string='test1'),
-            text(string='test2')
+        self.training_data = [
+            text(string='I am a nice string'),
+            text(string='I am also a very average string')
         ]
+
         self.training_classes = [True, False]
 
-        self.validation = [
-            text(string='test3'),
-            text(string='test4')
+        self.validation_data = [
+            text(string='I am a new string'),
+            text(string='I am another new string')
         ]
+
+        self.validation_classes = [False, False]
 
     def train(self, model):
         """
         Receive an untrained model and pass it whatever is required to train it.
         """
-        model.train(text=self.training, classes=self.training_classes)
+        model.train(text=self.training_data, classes=self.training_classes)
 
     def validate(self, model):
         """
@@ -32,9 +34,13 @@ class Camp(object):
         the validation dictionary it returns.
         """
 
-        # before doing statistical validation, we can do some miscellaneous unit tests
+        # before doing statistical validation, we can do some miscellaneous validations
         if type(model).__name__ == 'random':
-            raise Exception("Models can't be named random. It sends a bad message to the client.")
+            raise Exception("Models can't be named random. It scares the marketing team.")
 
         # run the validation and return the results
-        return model.validate(text=self.validation, classes=self.training_classes)
+        predictions = model.predict(text=self.validation_data)
+
+        return {
+            'accuracy': sum([1 if p == self.validation_classes[i] else 0 for i, p in enumerate(predictions)])
+        }

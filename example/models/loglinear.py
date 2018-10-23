@@ -1,3 +1,6 @@
+import random
+
+
 class LogLinearModel(object):
     def __init__(self, n_epochs=10, l2=0):
         """
@@ -13,16 +16,8 @@ class LogLinearModel(object):
         """
         pass
 
-    def validate(self, text=[], classes=[]):
-        """
-        Validate the model. Requires a response with the metrics defined in bootcamp.yml.
-        """
-        return {
-            'AUC': .66
-        }
-
     def predict(self, text=[]):
-        pass
+        return [random.choice([True, False]) for _ in range(len(text))]
 
     def save(self, path):
         pass
