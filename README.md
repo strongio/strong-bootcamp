@@ -7,12 +7,12 @@ The guiding principle: _If the model makes it through bootcamp, it's fit to be d
 
 ## Why use Bootcamp?
 
-1. You can ensure that each model faces the same rigorous tests before deployment, encouraging
+1. Easily integrate machine learning development/validation within a larger application.
+2. Each model faces the same rigorous training and validation before deployment, encouraging
 more confident, rapid iteration.
-2. You inherit a straightforward means of hyperparameter testing and evaluation for free.
-3. You maintain total control over _what_ is tested.
-4. You maintain total control over _where_ these tests occur (e.g., you can test models
-within a larger application or in a standalone experiment).
+3. Models can be easily configured for a hyperparameter grid-search.
+4. Results are logged, avoiding unnecessary duplication of efforts.
+5. Maintain complete control over the internals of your models (only the API is validated).
 
 ## Installation
 
