@@ -17,8 +17,7 @@ within a larger application or in a standalone experiment).
 ## Installation
 
     git clone https://github.com/strongio/strong-bootcamp.git
-    cd strong-bootcamp
-    pip install .
+    pip install strong-bootcamp
 
 ## Usage
 
