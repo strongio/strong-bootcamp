@@ -115,7 +115,7 @@ class Bootcamp(object):
                 logger.info("Results saved")
 
     def _model_key(self, model_name, parameters):
-        return "-".join([model_name, "-".join(["{}_{}".format(k, v) for k, v in parameters.items()])])
+        return "-".join([model_name, "-".join(["{}_{}".format(k, parameters[k]) for k in sorted(parameters.keys())])])
 
     def _parameter_iterations(self, parameters):
         """
