@@ -42,5 +42,5 @@ class Camp(object):
         predictions = model.predict(text=self.validation_data)
 
         return {
-            'accuracy': sum([1 if p == self.validation_classes[i] else 0 for i, p in enumerate(predictions)])
+            'accuracy': sum([1 if p == self.validation_classes[i] else 0 for i, p in enumerate(predictions)]) / float(len(predictions))
         }
