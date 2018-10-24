@@ -6,7 +6,6 @@ text = namedtuple('text', ['string'])
 
 class Camp(object):
     def __init__(self):
-        super().__init__()
         # pre-load data for use in training and testing
         self.training_data = [
             text(string='I am a nice string'),
