@@ -4,7 +4,7 @@ from collections import namedtuple
 text = namedtuple('text', ['string'])
 
 
-class Camp(object):
+class Camp:
     def __init__(self):
         # pre-load data for use in training and testing
         self.training_data = [

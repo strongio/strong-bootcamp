@@ -1,8 +1,9 @@
 import setuptools
+from bootcamp import __version__
 
 setuptools.setup(
     name='strong-bootcamp',
-    version='0.1',
+    version=__version__,
     packages=[p for p in setuptools.find_packages() if 'bootcamp' in p],
     url='https://www.strong.io',
     license='',
