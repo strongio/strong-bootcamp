@@ -235,7 +235,7 @@ class Bootcamp(object):
 
             # model-specific parameters
             if 'parameters' in model_config:
-                for parameter_name, values in model['parameters'].items():
+                for parameter_name, values in model_config['parameters'].items():
                     # do we have potential values?
                     if not len(values):
                         raise Exception("Hyper-parameter values for {} must be a non-zero length list".format(model_name))
