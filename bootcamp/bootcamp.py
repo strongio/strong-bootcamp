@@ -194,7 +194,7 @@ class Bootcamp(object):
             cls_and_method = model_config['callable'].split(".")
             if len(cls_and_method) == 1:
                 cls_name = cls_and_method[0]
-                method_name = '__init__'
+                method_name = '__new__'
             elif len(cls_and_method) == 2:
                 cls_name, method_name = cls_and_method
             else:
