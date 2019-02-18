@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 class Bootcamp(object):
     def __init__(self, config_path='bootcamp.yml',
-                       model_config_path='models.yml',
-                       results_path='results/',
-                       models=None):
+                 model_config_path='models.yml',
+                 results_path='results/',
+                 models=None):
         """
         Initialize a bootcamp.
 
@@ -64,7 +64,10 @@ class Bootcamp(object):
         for model_name, model in self.models.items():
             logger.info("Training one or more permutations of model: {}".format(model_name))
 
-            parameter_iterations = self.model_config['models'][model_name]['parameters'] if 'parameters' in self.model_config['models'][model_name] else None
+            if 'parameters' in self.model_config['models'][model_name]:
+                parameter_iterations = self.model_config['models'][model_name]['parameters']
+            else:
+                parameter_iterations = None
 
             for param_iter in self._parameter_iterations(parameter_iterations):
                 logger.info("Training model {} with parameters: {}".format(model_name, param_iter))
@@ -90,7 +93,8 @@ class Bootcamp(object):
 
                 for metric_name in self.config['model_requirements']['validation_metrics']:
                     if metric_name not in metrics:
-                        raise Exception("Validation results for {} did not include the {} metric".format(model_name, metric_name))
+                        raise Exception("Validation results for {} did not include the {} metric".
+                                        format(model_name, metric_name))
 
                 # show model results
                 logger.info("Results: {}".format(metrics))
@@ -138,11 +142,13 @@ class Bootcamp(object):
         elif 'module' not in self.config['bootcamp']:
             raise Exception("Configuration must specify the module with the Python bootcamp class: bootcamp.module")
         elif 'callable' not in self.config['bootcamp']:
-            raise Exception("Configuration must specify the name of the callable class within the Python bootcamp module: bootcamp.callable")
+            raise Exception("Configuration must specify the name of the callable class within the Python bootcamp module:"
+                            " bootcamp.callable")
         elif 'model_requirements' not in self.config:
             raise Exception("Configuration must specify the requirements for models: model_requirements")
         elif 'validation_metrics' not in self.config['model_requirements']:
-            raise Exception("Models must be assessed with at least one validation metric: model_requirements.validation_metrics")
+            raise Exception("Models must be assessed with at least one validation metric: "
+                            "model_requirements.validation_metrics")
         elif 'methods' not in self.config['model_requirements']:
             raise Exception("Model requirements must include methods: model_requirements.methods")
 
@@ -155,7 +161,8 @@ class Bootcamp(object):
         for method_name in required_methods:
             method_check = getattr(self.bootcamp, method_name)
             if not method_check or not inspect.ismethod(method_check):
-                raise Exception("Basecamp class at {}.{} does not have required {}() method.".format(self.config['bootcamp']['module'], self.config['bootcamp']['callable'], method_name))
+                raise Exception("Basecamp class at {}.{} does not have required {}() method.".
+                                format(self.config['bootcamp']['module'], self.config['bootcamp']['callable'], method_name))
 
             # evaluate whether the method can take the required "model" argument:
             this_argspec = inspect.signature(getattr(self.bootcamp, method_name))
@@ -171,18 +178,29 @@ class Bootcamp(object):
         if not len(self.model_config['models']):
             raise Exception("One or more models must be submitted to bootcamp: models")
 
-        for model_name, model in self.model_config['models'].items():
-            if 'module' not in model:
+        for model_name, model_config in self.model_config['models'].items():
+            if 'module' not in model_config:
                 raise Exception("{} is missing the 'module' attribution".format(model_name))
-            elif 'callable' not in model:
+            elif 'callable' not in model_config:
                 raise Exception("{} is missing the 'callable' attribution".format(model_name))
 
             # try and actually import the model
             try:
-                this_module = importlib.import_module(model['module'])
-                self.models[model_name] = getattr(this_module, model['callable'])
-            except:
-                raise Exception("Failed to import module for {}".format(model_name))
+                this_module = importlib.import_module(model_config['module'])
+            except Exception as e:
+                raise ImportError("Failed to import module for {}:\n{}".format(model_name, e))
+
+            # self.models holds constructors, not the class object itself
+            cls_and_method = model_config['callable'].split(".")
+            if len(cls_and_method) == 1:
+                cls_name = cls_and_method[0]
+                method_name = '__init__'
+            elif len(cls_and_method) == 2:
+                cls_name, method_name = cls_and_method
+            else:
+                raise ValueError("Could not parse callable {}.".format(model_config['callable']))
+            model_cls = getattr(this_module, cls_name)
+            self.models[model_name] = getattr(model_cls, method_name)
 
             # look for required methods in each model:
             for required_method in self.config['model_requirements']['methods']:
@@ -195,26 +213,28 @@ class Bootcamp(object):
                     method_name = required_method
                     required_arguments = []
 
-                method_check = getattr(self.models[model_name], method_name)
+                method_check = getattr(model_cls, method_name)
                 if not method_check:
                     raise Exception("{} does not have the required {}() method".format(model_name, method_name))
 
                 this_argspec = inspect.signature(method_check)
                 for parameter_name in required_arguments:
                     if parameter_name not in this_argspec.parameters:
-                        raise Exception("{} argument not found in {}.{}(), but all models are required to have this.".format(parameter_name, model_name, method_name))
+                        raise Exception("{} argument not found in {}.{}(), but all models are required to have this.".
+                                        format(parameter_name, model_name, method_name))
 
             # evaluate whether parameters are valid:
-            this_argspec = inspect.signature(self.models[model_name].__init__)
+            this_argspec = inspect.signature(self.models[model_name])
 
             # global parameters
             if self.config['model_requirements']['parameters']:
                 for parameter_name in self.config['model_requirements']['parameters']:
                     if parameter_name not in this_argspec.parameters:
-                        raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".format(parameter_name, model_name))
+                        raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".
+                                        format(parameter_name, model_name))
 
             # model-specific parameters
-            if 'parameters' in model:
+            if 'parameters' in model_config:
                 for parameter_name, values in model['parameters'].items():
                     # do we have potential values?
                     if not len(values):
@@ -222,4 +242,5 @@ class Bootcamp(object):
 
                     # can the __init__ take these arguments?
                     if parameter_name not in this_argspec.parameters:
-                        raise Exception("{} argument not found in {}.__init__(), but it was specified as a hyper-parameter.".format(parameter_name, model_name))
+                        raise Exception("{} argument not found in {}.__init__(), but it was specified as a hyper-parameter.".
+                                        format(parameter_name, model_name))
