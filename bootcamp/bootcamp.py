@@ -190,26 +190,48 @@ class Bootcamp(object):
             except Exception as e:
                 raise ImportError("Failed to import module for {}:\n{}".format(model_name, e))
 
-            # self.models holds constructors, not the class object itself
+            # support both bare class-name as constructor (which calls __init__ via __new__), as well as classmethods
             cls_and_method = model_config['callable'].split(".")
             if len(cls_and_method) == 1:
                 cls_name = cls_and_method[0]
-                method_name = '__new__'
+                constructor_name = None
             elif len(cls_and_method) == 2:
-                cls_name, method_name = cls_and_method
+                cls_name, constructor_name = cls_and_method
             else:
                 raise ValueError("Could not parse callable {}.".format(model_config['callable']))
             model_cls = getattr(this_module, cls_name)
-            self.models[model_name] = getattr(model_cls, method_name)
+            if constructor_name is None:
+                self.models[model_name] = model_cls
+            else:
+                self.models[model_name] = getattr(model_cls, constructor_name)
 
-            # look for required methods in each model:
+            # check the constructor for its required arguments:
+            constructor_argspec = inspect.signature(self.models[model_name])
+            if self.config['model_requirements']['parameters']:
+                for parameter_name in self.config['model_requirements']['parameters']:
+                    if parameter_name not in constructor_argspec.parameters:
+                        raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".
+                                        format(parameter_name, model_name))
+
+            if 'parameters' in model_config:
+                for parameter_name, values in model_config['parameters'].items():
+                    # do we have potential values?
+                    if not len(values):
+                        raise Exception("Hyper-parameter values for {} must be a non-zero length list".format(model_name))
+
+                    # can the constructor take these arguments?
+                    if parameter_name not in constructor_argspec.parameters:
+                        raise Exception("{} argument not found in {}.__init__(), but it was specified as a hyper-parameter.".
+                                        format(parameter_name, model_name))
+
+            # check each method and its required arguments:
             for required_method in self.config['model_requirements']['methods']:
                 if isinstance(required_method, dict):
                     # this method has required arguments
                     method_name = list(required_method.keys())[0]
                     required_arguments = list(required_method.values())[0]
                 else:
-                    # this method does not have required arguments
+                    # this method does not hxave required arguments
                     method_name = required_method
                     required_arguments = []
 
@@ -222,25 +244,3 @@ class Bootcamp(object):
                     if parameter_name not in this_argspec.parameters:
                         raise Exception("{} argument not found in {}.{}(), but all models are required to have this.".
                                         format(parameter_name, model_name, method_name))
-
-            # evaluate whether parameters are valid:
-            this_argspec = inspect.signature(self.models[model_name])
-
-            # global parameters
-            if self.config['model_requirements']['parameters']:
-                for parameter_name in self.config['model_requirements']['parameters']:
-                    if parameter_name not in this_argspec.parameters:
-                        raise Exception("{} argument not found in {}.__init__(), but all models are required to have this.".
-                                        format(parameter_name, model_name))
-
-            # model-specific parameters
-            if 'parameters' in model_config:
-                for parameter_name, values in model_config['parameters'].items():
-                    # do we have potential values?
-                    if not len(values):
-                        raise Exception("Hyper-parameter values for {} must be a non-zero length list".format(model_name))
-
-                    # can the __init__ take these arguments?
-                    if parameter_name not in this_argspec.parameters:
-                        raise Exception("{} argument not found in {}.__init__(), but it was specified as a hyper-parameter.".
-                                        format(parameter_name, model_name))
