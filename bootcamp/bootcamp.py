@@ -77,46 +77,53 @@ class Bootcamp(object):
 
                 # name this permutation
                 model_key = self._model_key(model_name, param_iter)
-
-                # save the model instance and parameters
-                self.model_instances[model_key] = {
-                    'object': model(**param_iter),
-                    'parameters': param_iter
-                }
-
-                # initialize and pass to the bootcamp for training
-                self.bootcamp.train(model=self.model_instances[model_key]['object'])
-
-                # validate the train model
-                logger.info("Validating model...")
-                metrics = self.bootcamp.validate(model=self.model_instances[model_key]['object'])
-
-                for metric_name in self.config['model_requirements']['validation_metrics']:
-                    if metric_name not in metrics:
-                        raise Exception("Validation results for {} did not include the {} metric".
-                                        format(model_name, metric_name))
-
-                # show model results
-                logger.info("Results: {}".format(metrics))
-
-                # track end time
-                iter_end_time = datetime.datetime.now()
-
-                results_json = {
-                    'model': model_name,
-                    'parameters': param_iter,
-                    'metrics': metrics,
-                    'timing': {
-                        'start': iter_start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                        'end': iter_end_time.strftime("%Y-%m-%d %H:%M:%S")
-                    }
-                }
-
                 results_path = os.path.join(self.results_path, "{}.json".format(model_key))
-                with open(results_path, 'w') as file:
-                    json.dump(results_json, file)
 
-                logger.info("Results saved")
+                try:
+                    # save the model instance and parameters
+                    self.model_instances[model_key] = {
+                        'object': model(**param_iter),
+                        'parameters': param_iter
+                    }
+
+                    # initialize and pass to the bootcamp for training
+                    self.bootcamp.train(model=self.model_instances[model_key]['object'])
+
+                    # validate the train model
+                    logger.info("Validating model...")
+                    metrics = self.bootcamp.validate(model=self.model_instances[model_key]['object'])
+
+                    for metric_name in self.config['model_requirements']['validation_metrics']:
+                        if metric_name not in metrics:
+                            raise Exception("Validation results for {} did not include the {} metric".
+                                            format(model_name, metric_name))
+
+                    # show model results
+                    logger.info("Results: {}".format(metrics))
+
+                    # track end time
+                    iter_end_time = datetime.datetime.now()
+
+                    results_json = {
+                        'model': model_name,
+                        'parameters': param_iter,
+                        'metrics': metrics,
+                        'timing': {
+                            'start': iter_start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                            'end': iter_end_time.strftime("%Y-%m-%d %H:%M:%S")
+                        }
+                    }
+
+
+                    with open(results_path, 'w') as file:
+                        json.dump(results_json, file)
+
+                    logger.info("Results saved")
+                except Exception as e:
+                    with open(results_path, 'w') as file:
+                        file.write(str(e))
+
+                    logger.info("Failure -- exception saved")
 
     def _model_key(self, model_name, parameters):
         return "-".join([model_name, "-".join(["{}_{}".format(k, parameters[k]) for k in sorted(parameters.keys())])])
