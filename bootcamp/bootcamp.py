@@ -114,7 +114,6 @@ class Bootcamp(object):
                         }
                     }
 
-
                     with open(results_path, 'w') as file:
                         json.dump(results_json, file)
 
