@@ -1,0 +1,27 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "Cython"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strong-bootcamp"
+description = "Framework for experimenting with and validating models pre-deployment"
+readme = "README.md"
+license = { file = "LICENSE.txt" }
+requires-python = ">=3.7"
+authors = [
+    {name = "Strong Analytics", email = "contact@strong.io"}
+]
+urls = {Strong = "https://www.strong.io"}
+dependencies = [
+    "pyyaml"
+]
+dynamic = ["version"]
+
+[project.scripts]
+bootcamp = "bootcamp.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "bootcamp.__version__"}
