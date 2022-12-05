@@ -1,0 +1,29 @@
+name: Setup venv From Cache
+description: 'Send Slack Message using Template for Strong'
+inputs:
+  key:
+    description: 'Key for Cache'
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Cache venv
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: "${{ github.workspace }}/.venv/"
+        key: strong-ml-${{ github.ref_name }}
+
+    - name: Create venv
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        echo GITHHUB_WORKSPACE=$GITHUB_WORKSPACE
+        python -m venv $GITHUB_WORKSPACE/.venv
+      shell: bash
+
+    - name: Set venv env vars
+      run: |
+        source $GITHUB_WORKSPACE/.venv/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "PATH=$PATH" >> $GITHUB_ENV
+      shell: bash

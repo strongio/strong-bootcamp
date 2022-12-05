@@ -1,0 +1,188 @@
+name: Strong Bootcamp Deploy
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+
+env:
+  CHANNEL_ID: 'C992RAEQ4'
+
+jobs:
+  test:
+    name: Run tests
+    strategy:
+      matrix:
+        version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.version }}
+
+      - uses: ./.github/actions/venv-setup
+        with:
+          key: strong-bootcamp-${{ github.ref_name }}-${{ matrix.version }}
+
+      - name: Install strong-bootcamp
+        run: pip install .
+
+      - name: Run tests
+        run: python -m unittest
+
+      - name: Notify Slack on Failure
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack
+        with:
+          channel-id: ${{ env.CHANNEL_ID }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: 'FAIL'
+
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install cibuildwheel
+        run: pip install cibuildwheel==2.11.2
+
+      - id: set-matrix
+        run: |
+          MATRIX=$(
+            {
+              echo '{"only": "cp37-manylinux_x86_64", "os": "ubuntu-latest"}' && \
+              echo '{"only": "cp37-macosx_x86_64", "os": "macos-latest"}' && \
+              cibuildwheel --print-build-identifiers --platform linux \
+              | grep -E 'cp3[0-9]+-manylinux_x86_64' | jq -Rc '{"only": inputs, "os": "ubuntu-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform macos \
+              | grep 'cp' | jq -Rc '{"only": inputs, "os": "macos-latest"}'
+            } | jq -sc
+          )
+
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build Packages
+    needs: [test, setup]
+    if: ${{ github.event_name == 'push' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.setup.outputs.matrix) }}
+    runs-on: ${{ matrix.os }}
+    concurrency:
+      group: build-${{ matrix.only }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build wheels using cibuildwheel
+        uses: pypa/cibuildwheel@v2.11.2
+        with:
+          only: ${{ matrix.only }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.run_id }}-artifacts
+          path: ./wheelhouse/*.whl
+          retention-days: 1
+
+      - name: Notify Slack on Failure
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack
+        with:
+          channel-id: ${{ env.CHANNEL_ID }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: 'FAIL'
+
+  deploy:
+    name: Deploy uploaded packages
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: 'arn:aws:iam::606444696334:role/strong-opx-github-actions-role'
+          aws-region: us-west-2
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - uses: ./.github/actions/venv-setup
+        with:
+          key: strong-ml-${{ github.ref_name }}-deploy
+
+      - name: Install dependencies
+        run: pip install awscli
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.run_id }}-artifacts
+
+      - name: Upload Release to S3
+        run: |
+          for file in $(find . -type f -name "*.whl"); do
+            info=$(echo "$file" | sed -r 's/.+strong_bootcamp-[0-9.]+-//g')
+            aws s3 cp $file s3://strong-packages/ --acl public-read
+            aws s3 cp $file s3://strong-packages/strong_bootcamp-latest-$info --acl public-read
+          done
+
+      - name: Upload Release to Github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          files=()
+          for file in $(find . -type f -name "*.whl"); do
+            files+=("-a" "$file")
+          done
+
+          version=$(python -c 'from bootcamp import __version__; print(__version__)')
+          owner='strongio'
+          repo='strong-bootcamp'
+          tag="v${version}"
+
+          git push --delete origin $tag || echo "No tag to delete"
+          hub release delete $tag || echo "No release to delete"
+
+          hub release create \
+            "${files[@]}" \
+            -m "$tag" \
+            -m "Built by Github Actions" \
+            -t ${{ github.ref_name }} \
+            $tag
+
+      - name: Notify Slack on Failure
+        if: ${{ failure() }}
+        uses: ./.github/actions/slack
+        with:
+          channel-id: ${{ env.CHANNEL_ID }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: 'FAIL'
+
+  slack:
+    name: Notify Success
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/slack
+        with:
+          channel-id: ${{ env.CHANNEL_ID }}
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          status: 'SUCCESS'
