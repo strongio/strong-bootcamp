@@ -156,8 +156,8 @@ jobs:
           repo='strong-bootcamp'
           tag="v${version}"
 
-          git push --delete origin $tag || echo "No tag to delete"
           hub release delete $tag || echo "No release to delete"
+          git push --delete origin $tag || echo "No tag to delete"
 
           hub release create \
             "${files[@]}" \
